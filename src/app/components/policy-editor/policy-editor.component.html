@@ -20,7 +20,7 @@
 
 <div class="policy-editor-container">
   <div class="policy-editor-container flex justify-center">
-    <mat-form-field appearance="outline">
+    <mat-form-field appearance="outline" style="width: 40%">
       <mat-label>Select policy</mat-label>
       <mat-select [ngModel]="policyConfig" (ngModelChange)="onConfigSelectionChange($event)">
         <mat-option *ngFor="let config of configurations" [value]="config">

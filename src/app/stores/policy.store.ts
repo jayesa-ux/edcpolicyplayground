@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /*******************************************************************************
  * Copyright (c) 2023 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
  * Copyright (c) 2023 Contributors to the Eclipse Foundation
@@ -26,6 +27,18 @@ import {
   credentialsConstraints,
   inForceDurationConstraint,
   inForceFixedConstraint,
+  // Data Processor variants
+  dataProcessorExternalConstraint,
+  dataProcessorInternalConstraint,
+  // Fixed Date and BPN Group variants
+  fixedDateAndBpnGroupExternalConstraint,
+  fixedDateAndBpnGroupInternalConstraint,
+  // Membership variants
+  membershipExternalConstraint,
+  membershipInternalConstraint,
+  // Period from Contract variants
+  periodFromContractExternalConstraint,
+  periodFromContractInternalConstraint,
 } from '../services/constraints';
 
 @Injectable()
@@ -34,11 +47,19 @@ export class PolicyConfigurationStore {
 
   constructor() {
     this.configurations = [
-      bpnPolicy(),
-      bpnGroupPolicy(),
-      inForceFixedPolicy(),
-      inForceDurationPolicy(),
-      ...credentialsPolicies(),
+      DataProcessor_externalContext(),
+      DataProcessor_InternalContext(),
+      FixedDateAndBpnGroup_InternalContext(),
+      FixedDateAndBpnGroup_ExternalContext(),
+      Membership_InternalContext(),
+      Membership_ExternalContext(),
+      PeriodFromContractAgreementAndBpn_externalContext(),
+      PeriodFromContractAgreementAndBpn_InternalContext(),
+      // bpnPolicy(),
+      // bpnGroupPolicy(),
+      // inForceFixedPolicy(),
+      // inForceDurationPolicy(),
+      // ...credentialsPolicies(),
     ];
   }
 
@@ -51,27 +72,88 @@ export class PolicyConfigurationStore {
   }
 }
 
-export function bpnPolicy(): PolicyConfiguration {
-  return createPolicy('Business Partner Number Policy', bpnConstraint(), 'Bpn permission');
+// ==================== DATA PROCESSOR FUNCTIONS ====================
+export function DataProcessor_externalContext(): PolicyConfiguration {
+  return createPolicy(
+    'DataProcessor External Context',
+    dataProcessorExternalConstraint(),
+    'Data Processing Permission',
+  );
 }
 
-export function bpnGroupPolicy(): PolicyConfiguration {
-  return createPolicy('Business Partner Group Policy', bpnGroupConstraint(), 'Business Partner Group permission');
+export function DataProcessor_InternalContext(): PolicyConfiguration {
+  return createPolicy(
+    'DataProcessor Internal Context',
+    dataProcessorInternalConstraint(),
+    'Data Processing Permission',
+  );
 }
 
-function inForceFixedPolicy(): PolicyConfiguration {
-  return createPolicy('InForce Policy (Fixed)', inForceFixedConstraint());
+// ==================== FIXED DATE AND BPN GROUP FUNCTIONS ====================
+export function FixedDateAndBpnGroup_InternalContext(): PolicyConfiguration {
+  return createPolicy(
+    'FixedDateAndBpnGroup Internal Context',
+    fixedDateAndBpnGroupInternalConstraint(),
+    'Date and BPN Group Permission',
+  );
 }
 
-function inForceDurationPolicy(): PolicyConfiguration {
-  return createPolicy('InForce Policy (Duration)', inForceDurationConstraint());
+export function FixedDateAndBpnGroup_ExternalContext(): PolicyConfiguration {
+  return createPolicy(
+    'FixedDateAndBpnGroup External Context',
+    fixedDateAndBpnGroupExternalConstraint(),
+    'Date and BPN Group Permission',
+  );
 }
 
-function credentialsPolicies(): PolicyConfiguration[] {
-  return credentialsConstraints().map(c => {
-    return createPolicy(`${c.get_label()}  Policy`, c);
-  });
+// ==================== MEMBERSHIP FUNCTIONS ====================
+export function Membership_InternalContext(): PolicyConfiguration {
+  return createPolicy('Membership Internal Context', membershipInternalConstraint(), 'Membership Permission');
 }
+
+export function Membership_ExternalContext(): PolicyConfiguration {
+  return createPolicy('Membership External Context', membershipExternalConstraint(), 'Membership Permission');
+}
+
+// ==================== PERIOD FROM CONTRACT FUNCTIONS ====================
+export function PeriodFromContractAgreementAndBpn_externalContext(): PolicyConfiguration {
+  return createPolicy(
+    'PeriodFromContractAgreementAndBpn External Context',
+    periodFromContractExternalConstraint(),
+    'Contract Period and BPN Permission',
+  );
+}
+
+export function PeriodFromContractAgreementAndBpn_InternalContext(): PolicyConfiguration {
+  return createPolicy(
+    'PeriodFromContractAgreementAndBpn Internal Context',
+    periodFromContractInternalConstraint(),
+    'Contract Period and BPN Permission',
+  );
+}
+
+// ==================== EXISTING FUNCTIONS ====================
+// export function bpnPolicy(): PolicyConfiguration {
+//   return createPolicy('Business Partner Number Policy', bpnConstraint(), 'Bpn permission');
+// }
+
+// export function bpnGroupPolicy(): PolicyConfiguration {
+//   return createPolicy('Business Partner Group Policy', bpnGroupConstraint(), 'Business Partner Group permission');
+// }
+
+// function inForceFixedPolicy(): PolicyConfiguration {
+//   return createPolicy('InForce Policy (Fixed)', inForceFixedConstraint());
+// }
+
+// function inForceDurationPolicy(): PolicyConfiguration {
+//   return createPolicy('InForce Policy (Duration)', inForceDurationConstraint());
+// }
+
+// function credentialsPolicies(): PolicyConfiguration[] {
+//   return credentialsConstraints().map(c => {
+//     return createPolicy(`${c.get_label()} Policy`, c);
+//   });
+// }
 
 function createPolicy(name: string, constraint: Constraint, policyName = 'Permission'): PolicyConfiguration {
   const config = new PolicyConfiguration(name);

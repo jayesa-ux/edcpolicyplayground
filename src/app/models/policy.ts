@@ -83,11 +83,12 @@ export class LeftOperand {
 export class AtomicConstraint implements Constraint {
   leftOperand!: LeftOperand;
   operator: Operator;
-  rightOperand?: string | number | Value;
+  rightOperand?: string | number | Value | string[]; // Añadido: soporte para arrays
   kind: ValueKind;
   contexts: string[] = [];
   prefixes: string[] = [];
   label?: string;
+
   constructor();
   constructor(leftOperand: LeftOperand);
   constructor(leftOperand: LeftOperand, operator: Operator, rightOperator: RightOperand);
@@ -95,7 +96,7 @@ export class AtomicConstraint implements Constraint {
   constructor(
     leftOperand?: LeftOperand,
     operator: Operator = Operator.Eq,
-    rightOperand?: string | number | Value,
+    rightOperand?: string | number | Value | string[], // Actualizado para incluir arrays
     kind: ValueKind = ValueKind.String,
   ) {
     this.kind = kind;
@@ -189,6 +190,8 @@ export enum Action {
 export enum Operator {
   Eq = 'eq',
   Neq = 'neq',
+  Gt = 'gt',
+  Lt = 'lt',
   Gte = 'gteq',
   Lte = 'lteq',
   In = 'isPartOf',
@@ -235,7 +238,7 @@ export interface ConstraintTemplate {
   factory: () => Constraint;
 }
 
-export type RightOperand = string | number | Value;
+export type RightOperand = string | number | Value | string[];
 
 export enum OutputKind {
   Prefixed = 'Prefixed',

@@ -31,9 +31,6 @@ import {
 import { JsonLdFormatter } from '../format.service';
 import { PolicyService } from '../policy.service';
 
-const CONTEXTS = ['http://www.w3.org/ns/odrl.jsonld'];
-const NESTED_CONTEXT = { '@vocab': 'https://w3id.org/edc/v0.0.1/ns/' };
-
 export const policyRequestTemplate = {
   '@context': {},
   '@type': 'PolicyDefinition',
@@ -54,53 +51,135 @@ export const emptyPolicy = Object.assign(policyRequestTemplate, {
 
 export class PlainFormatter implements JsonLdFormatter {
   policyService: PolicyService;
+
   constructor(policyService: PolicyService) {
     this.policyService = policyService;
   }
 
   toJsonLd(policyConfig: PolicyConfiguration): object {
-    const permission = policyConfig.policy.permissions.map(this.mapPermission.bind(this));
-    const additionalNamespaces = this.policyService.namespacesFor(policyConfig);
-    const additionalContexts = this.policyService.contextsFor(policyConfig);
+    const policyType = this.getPolicyType(policyConfig.name);
+    const contextType = this.getContextType(policyConfig.name);
 
-    const context = [...CONTEXTS, ...additionalContexts, Object.assign(NESTED_CONTEXT, additionalNamespaces)];
+    return this.createStandardFormat(policyConfig, policyType, contextType);
+  }
 
-    return Object.assign(emptyPolicy, {
+  private getPolicyType(
+    policyName: string,
+  ): 'dataprocessor' | 'fixeddateandbnpgroup' | 'membership' | 'period' | 'other' {
+    const name = policyName.toLowerCase();
+    if (name.includes('dataprocessor')) return 'dataprocessor';
+    if (name.includes('fixeddateandbnpgroup')) return 'fixeddateandbnpgroup';
+    if (name.includes('membership')) return 'membership';
+    if (name.includes('period')) return 'period';
+    return 'other';
+  }
+
+  private getContextType(policyName: string): 'external' | 'internal' {
+    const name = policyName.toLowerCase();
+    if (name.includes('external')) return 'external';
+    if (name.includes('internal')) return 'internal';
+    return 'external'; // Default to external
+  }
+
+  private createStandardFormat(policyConfig: PolicyConfiguration, policyType: string, contextType: string): object {
+    const permissions = policyConfig.policy.permissions.map(this.mapPermission.bind(this));
+    const context = this.buildContext(policyType, contextType);
+
+    // DataProcessor usa obligation, otros usan permission
+    const policyContent =
+      policyType === 'dataprocessor'
+        ? { '@type': 'Set', obligation: permissions }
+        : { '@type': 'Set', permission: permissions };
+
+    return {
       '@context': context,
-      policy: { ...policyHeader, permission },
-    });
+      '@id': this.generatePolicyId(policyConfig.name),
+      '@type': 'PolicyDefinition',
+      policy: policyContent,
+    };
+  }
+
+  private buildContext(policyType: string, contextType: string): any[] {
+    const baseContexts = ['http://www.w3.org/ns/odrl.jsonld'];
+
+    if (contextType === 'external') {
+      return [
+        ...baseContexts,
+        'https://raw.githubusercontent.com/imferna/json-ld-contexts/refs/heads/main/policy.context.jsonld',
+        'https://w3id.org/edc/connector/management/v0.0.1',
+        {
+          '@vocab': 'https://w3id.org/edc/v0.0.1/ns/',
+        },
+      ];
+    } else if (contextType === 'internal') {
+      return [
+        ...baseContexts,
+        'https://raw.githubusercontent.com/imferna/json-ld-contexts/refs/heads/main/policy.context.jsonld',
+        {
+          'i3b-policy': 'https://w3id.org/i3b-mvd/policy/',
+          businessPartnerNumber: 'i3b-policy:businessPartnerNumber',
+          MembershipCredential: 'i3b-policy:MembershipCredential',
+          'DataAccess.level': 'i3b-policy:DataAccess.level',
+          '@vocab': 'https://w3id.org/edc/v0.0.1/ns/',
+        },
+      ];
+    } else {
+      // Default context
+      return [
+        ...baseContexts,
+        {
+          '@vocab': 'https://w3id.org/edc/v0.0.1/ns/',
+        },
+      ];
+    }
+  }
+
+  private generatePolicyId(policyName: string): string {
+    if (policyName.toLowerCase().includes('dataprocessor')) {
+      return 'require-dataprocessor';
+    } else if (policyName.toLowerCase().includes('membership')) {
+      return 'require-membership';
+    } else if (policyName.toLowerCase().includes('bpn')) {
+      return 'require-bpn';
+    } else {
+      return '{{POLICY_ID}}';
+    }
   }
 
   mapPermission(permission: Permission): object {
     return {
       action: permission.action.toString(),
-      constraint: permission.constraints.map(this.mapConstraint.bind(this)),
+      constraint:
+        permission.constraints.length === 1
+          ? this.mapConstraint(permission.constraints[0])
+          : permission.constraints.map(this.mapConstraint.bind(this)),
     };
   }
 
   mapConstraint(constraint: Constraint): object {
     if (constraint instanceof AtomicConstraint) {
-      const leftOperand = constraint.leftOperand.toString();
       return {
-        leftOperand,
+        leftOperand: constraint.leftOperand.toString(),
         operator: constraint.operator.toString(),
         rightOperand: this.mapRightOperand(constraint),
       };
     } else if (constraint instanceof LogicalConstraint) {
-      const obj: any = {};
-      obj[constraint.operator.toString().toLowerCase()] = constraint.constraints.map(this.mapConstraint.bind(this));
-      return obj;
+      return {
+        [constraint.operator.toString().toLowerCase()]: constraint.constraints.map(this.mapConstraint.bind(this)),
+      };
     }
 
     return {};
   }
 
-  mapRightOperand(constraint: AtomicConstraint): string | number | object | undefined {
+  mapRightOperand(constraint: AtomicConstraint): string | number | object | any[] | undefined {
     if (constraint.rightOperand instanceof Value) {
       return {
         '@value': constraint.rightOperand.value,
         '@type': constraint.rightOperand.ty,
       };
+    } else if (Array.isArray(constraint.rightOperand)) {
+      return constraint.rightOperand;
     } else {
       return constraint.rightOperand;
     }
