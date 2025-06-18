@@ -15,7 +15,7 @@
         "action": "use",
         "constraint": [
           {
-            "leftOperand": "BusinessPartnerGroup",
+            "leftOperand": "businessPartnerGroup",
             "operator": "isPartOf",
             "rightOperand": "<group>"
           }

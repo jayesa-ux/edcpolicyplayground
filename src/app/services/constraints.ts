@@ -51,7 +51,7 @@ export const bpnConstraint = () => {
 };
 
 export const bpnGroupConstraint = () => {
-  return new AtomicConstraint(new LeftOperand('BusinessPartnerGroup'), Operator.In, '<group>').with_context(
+  return new AtomicConstraint(new LeftOperand('businessPartnerGroup'), Operator.In, '<group>').with_context(
     TX_BASE_CONTEXT,
   );
 };
